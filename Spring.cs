@@ -29,7 +29,7 @@ namespace Jimmacle.Manipulator
             }
             else
             {
-                targetLength = (float)(left.WorldPosition - right.WorldPosition).Length();
+                this.targetLength = (float)(left.WorldPosition - right.WorldPosition).Length();
             }
 
             this.springConstant = springConstant;
@@ -45,9 +45,6 @@ namespace Jimmacle.Manipulator
 
         public void Update()
         {
-            leftHit.Update();
-            rightHit.Update();
-
             if (leftHit.IsValid && rightHit.IsValid && !broken)
             {
                 if (leftHit.GrabbedObject == rightHit.GrabbedObject)
@@ -79,7 +76,6 @@ namespace Jimmacle.Manipulator
                     }
                 }
 
-                //Graphics stuff
                 if (Extensions.HasGUI())
                 {
                     var lineColor = Vector4.Lerp(Color.LimeGreen, Color.Red, (float)(forceMag / breakForce));

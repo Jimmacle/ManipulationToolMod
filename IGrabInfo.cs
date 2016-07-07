@@ -14,6 +14,5 @@ namespace Jimmacle.Manipulator
         IMyEntity PhysicsEntity { get; }
         bool IsValid { get; }
         Vector3D WorldPosition { get; }
-        void Update();
     }
 }

@@ -7,31 +7,27 @@ namespace Jimmacle.Manipulator
 {
     public class GrabInfo : IGrabInfo
     {
+        private bool dirty;
         public Vector3D LocalPosition { get; private set; } = Vector3D.Zero;
 
-
+        private Vector3D worldPosition;
         public Vector3D WorldPosition
         {
             get
             {
-                return Vector3D.Transform(LocalPosition, PhysicsEntity.WorldMatrix);
+                if (dirty)
+                {
+                    RecalculateWorldPosition();
+                }
+                return worldPosition;
             }
-            set
-            {
-                LocalPosition = Vector3D.Transform(value, PhysicsEntity.WorldMatrixNormalizedInv);
-            }
-        }
-
-        public void Update()
-        {
-            //This is only necessary in GrabInfoBlock.
         }
 
         public bool IsValid
         {
             get
             {
-                return PhysicsEntity != null && !PhysicsEntity.Closed;
+                return PhysicsEntity?.Physics != null && !PhysicsEntity.Closed;
             }
         }
 
@@ -41,14 +37,22 @@ namespace Jimmacle.Manipulator
         public GrabInfo(IMyEntity entity, Vector3D worldHitPos)
         {
             PhysicsEntity = entity.GetTopMostParent();
-            WorldPosition = worldHitPos;
+            LocalPosition = Vector3D.Transform(worldHitPos, PhysicsEntity.WorldMatrix);
+            worldPosition = worldHitPos;
+
+            PhysicsEntity.PositionComp.OnPositionChanged += x => dirty = true;
+        }
+
+        private void RecalculateWorldPosition()
+        {
+            worldPosition = Vector3D.Transform(LocalPosition, PhysicsEntity.WorldMatrixNormalizedInv);
+            dirty = false;
         }
 
         public GrabInfo(IHitInfo info)
         {
-            MyAPIGateway.Utilities.ShowMessage("link", info.HitEntity.GetType().ToString());
             PhysicsEntity = info.HitEntity;
-            WorldPosition = info.Position;
+            worldPosition = info.Position;
         }
     }
 }

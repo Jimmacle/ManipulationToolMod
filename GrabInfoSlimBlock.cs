@@ -9,11 +9,35 @@ namespace Jimmacle.Manipulator
     public class GrabInfoSlimBlock : IGrabInfo
     {
         private bool dirty = false;
+        private bool gridChanged = false;
         public Vector3D LocalPosition { get; private set; } = Vector3D.Zero;
         public Vector3D GridOffset { get; private set; }
-        public Vector3D WorldPosition { get; private set; }
+        private Vector3D worldPosition;
+        public Vector3D WorldPosition
+        {
+            get
+            {
+                if (dirty)
+                {
+                    RecalculateWorldPosition();
+                }
+                return worldPosition;
+            }
+        }
         public IMySlimBlock Block { get; private set; }
-        public IMyCubeGrid Grid { get; private set; }
+
+        private IMyCubeGrid grid;
+        public IMyCubeGrid Grid
+        {
+            get
+            {
+                if (gridChanged)
+                {
+                    CalculateGridOffset();
+                }
+                return grid;
+            }
+        }
 
         public IMyEntity PhysicsEntity
         {
@@ -35,59 +59,55 @@ namespace Jimmacle.Manipulator
 
         public GrabInfoSlimBlock(IMySlimBlock block, Vector3D worldGrabPos)
         {
-            MyAPIGateway.Utilities.ShowMessage("link", "slimblock");
             Block = block;
-            Grid = block.CubeGrid;
+            grid = block.CubeGrid;
+            LocalPosition = Vector3D.Transform(worldGrabPos, MatrixD.Invert(GetBlockWorldMatrix()));
+            worldPosition = worldGrabPos;
 
-            block.CubeGrid.OnBlockRemoved += OnBlockRemoved;
-            block.CubeGrid.PositionComp.OnPositionChanged += OnPositionChanged;
-
-            LocalPosition = LocalPosition = Vector3D.Transform(worldGrabPos, MatrixD.Invert(GetBlockWorldMatrix()));
-            RecalculateGridOffset();
-            WorldPosition = worldGrabPos;
+            CalculateGridOffset();
+            RecalculateWorldPosition();
         }
 
         private void OnPositionChanged(MyPositionComponentBase obj)
         {
-            WorldPosition = Vector3D.Transform(GridOffset, Grid.WorldMatrix);
+            dirty = true;
+        }
+
+        private void RecalculateWorldPosition()
+        {
+            worldPosition = Vector3D.Transform(GridOffset, Grid.WorldMatrix);
+            dirty = false;
         }
 
         private void OnBlockRemoved(IMySlimBlock obj)
         {
             if (obj == Block)
             {
-                Grid.OnBlockRemoved -= OnBlockRemoved;
-                Grid.PositionComp.OnPositionChanged -= OnPositionChanged;
-                dirty = true;
+                grid.OnBlockRemoved -= OnBlockRemoved;
+                grid.PositionComp.OnPositionChanged -= OnPositionChanged;
+                grid = null;
+                gridChanged = true;
             }
         }
 
-        public void Update()
+        private void CalculateGridOffset()
         {
-            if (dirty)
-            {
-                Grid = Block.CubeGrid;
-                Grid.OnBlockRemoved += OnBlockRemoved;
-                Grid.PositionComp.OnPositionChanged += OnPositionChanged;
-                RecalculateGridOffset();
-                dirty = false;
-            }
-        }
-
-        public void RecalculateGridOffset()
-        {
+            grid = Block.CubeGrid;
+            grid.OnBlockRemoved += OnBlockRemoved;
+            grid.PositionComp.OnPositionChanged += OnPositionChanged;
             var currentWorldPos = Vector3D.Transform(LocalPosition, GetBlockWorldMatrix());
-
-            GridOffset = Vector3D.Transform(currentWorldPos, Grid.WorldMatrixNormalizedInv);
+            GridOffset = Vector3D.Transform(currentWorldPos, grid.WorldMatrixNormalizedInv);
+            MyAPIGateway.Utilities.ShowMessage("", GridOffset.ToString());
+            gridChanged = false;
         }
 
         public MatrixD GetBlockWorldMatrix()
         {
-            var position = Grid.GridIntegerToWorld(Block.Position);
+            var position = grid.GridIntegerToWorld(Block.Position);
             Matrix blockMatrix;
             Block.Orientation.GetMatrix(out blockMatrix);
 
-            var transform = blockMatrix * Grid.WorldMatrix;
+            var transform = blockMatrix * grid.WorldMatrix;
             transform.Translation = position;
 
             return transform;
