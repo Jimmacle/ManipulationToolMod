@@ -18,6 +18,7 @@ namespace Jimmacle.Manipulator
 
         private bool init = false;
         private bool grabbed = false;
+        private bool enabled = true;
         private Grabber grabber;
         private List<Grabber> otherGrabbers = new List<Grabber>();
         private IMyInput input;
@@ -26,11 +27,13 @@ namespace Jimmacle.Manipulator
 
         public override void UpdateAfterSimulation()
         {
-            if (MyAPIGateway.Session != null)
+            if (MyAPIGateway.Session != null && enabled)
             {
                 if (!init)
                 {
+                    MyAPIGateway.Utilities.MessageEntered += Utilities_MessageEntered;
                     MyAPIGateway.Multiplayer.RegisterMessageHandler(HANDLER_ID, MessageHandler);
+                    grabber = new Grabber(MyAPIGateway.Session.Player);
                     input = MyAPIGateway.Input;
                     Settings.Load();
                     menu = new NotificationMenu();
@@ -48,7 +51,7 @@ namespace Jimmacle.Manipulator
                     {
                         LinkHandler.TryMake();
                         /*
-                        if (Settings.Static.ToggleGrab && grabbed)
+                        if (Settings.Instance.ToggleGrab && grabbed)
                         {
                             Release();
                         }
@@ -59,7 +62,7 @@ namespace Jimmacle.Manipulator
                     }
                     else if (input.IsNewPrimaryButtonReleased())
                     {
-                        if (!Settings.Static.ToggleGrab)
+                        if (!Settings.Instance.ToggleGrab)
                         {
                             Release();
                         }
@@ -78,18 +81,22 @@ namespace Jimmacle.Manipulator
             }
         }
 
+        private void Utilities_MessageEntered(string messageText, ref bool sendToOthers)
+        {
+            if (messageText == "/m")
+            {
+                sendToOthers = false;
+                enabled = !enabled;
+            }
+        }
+
         private void Grab()
         {
             if (MyAPIGateway.Session.ControlledObject != null && MyGuiScreenTerminal.GetCurrentScreen() == MyTerminalPageEnum.None && MyGuiScreenGamePlay.ActiveGameplayScreen == null)
             {
-                if (grabber == null)
-                {
-                    grabber = new Grabber(MyAPIGateway.Session.Player);
-                }
-
                 if (grabber.TryGrabNew(5))
                 {
-                    List<byte> packet = new List<byte>();
+                    var packet = new List<byte>();
                     packet.AddRange(BitConverter.GetBytes(true));
                     packet.AddRange(BitConverter.GetBytes(MyAPIGateway.Session.Player.IdentityId));
 

@@ -10,52 +10,34 @@ namespace Jimmacle.Manipulator
     {
         private bool dirty = false;
         private bool gridChanged = false;
-        public Vector3D LocalPosition { get; private set; } = Vector3D.Zero;
-        public Vector3D GridOffset { get; private set; }
         private Vector3D worldPosition;
+        private IMyCubeGrid grid;
+        public Vector3D LocalPosition { get; }
+        public Vector3D GridOffset { get; private set; }
+        public IMySlimBlock Block { get; }
+        public IMyEntity PhysicsEntity => CurrentGrid;
+
         public Vector3D WorldPosition
         {
             get
             {
-                if (dirty)
-                {
-                    RecalculateWorldPosition();
-                }
+                UpdateWorldPosition();
                 return worldPosition;
             }
         }
-        public IMySlimBlock Block { get; private set; }
 
-        private IMyCubeGrid grid;
-        public IMyCubeGrid Grid
+        public IMyCubeGrid CurrentGrid
         {
             get
             {
-                if (gridChanged)
-                {
-                    CalculateGridOffset();
-                }
+                UpdateGridOffset();
                 return grid;
             }
         }
 
-        public IMyEntity PhysicsEntity
-        {
-            get
-            {
-                return Grid;
-            }
-        }
 
-        object IGrabInfo.GrabbedObject { get { return Block; } }
-
-        bool IGrabInfo.IsValid
-        {
-            get
-            {
-                return Grid?.Physics != null && !Grid.Closed && Grid.GetCubeBlock(Block.Position) != null;
-            }
-        }
+        object IGrabInfo.GrabbedObject => Block;
+        bool IGrabInfo.IsValid => CurrentGrid?.Physics != null && !CurrentGrid.Closed && CurrentGrid.GetCubeBlock(Block.Position) != null;
 
         public GrabInfoSlimBlock(IMySlimBlock block, Vector3D worldGrabPos)
         {
@@ -64,8 +46,8 @@ namespace Jimmacle.Manipulator
             LocalPosition = Vector3D.Transform(worldGrabPos, MatrixD.Invert(GetBlockWorldMatrix()));
             worldPosition = worldGrabPos;
 
-            CalculateGridOffset();
-            RecalculateWorldPosition();
+            UpdateGridOffset();
+            UpdateWorldPosition();
         }
 
         private void OnPositionChanged(MyPositionComponentBase obj)
@@ -73,10 +55,13 @@ namespace Jimmacle.Manipulator
             dirty = true;
         }
 
-        private void RecalculateWorldPosition()
+        private void UpdateWorldPosition()
         {
-            worldPosition = Vector3D.Transform(GridOffset, Grid.WorldMatrix);
-            dirty = false;
+            if (dirty)
+            {
+                worldPosition = Vector3D.Transform(GridOffset, CurrentGrid.WorldMatrix);
+                dirty = false;
+            }
         }
 
         private void OnBlockRemoved(IMySlimBlock obj)
@@ -90,15 +75,18 @@ namespace Jimmacle.Manipulator
             }
         }
 
-        private void CalculateGridOffset()
+        private void UpdateGridOffset()
         {
-            grid = Block.CubeGrid;
-            grid.OnBlockRemoved += OnBlockRemoved;
-            grid.PositionComp.OnPositionChanged += OnPositionChanged;
-            var currentWorldPos = Vector3D.Transform(LocalPosition, GetBlockWorldMatrix());
-            GridOffset = Vector3D.Transform(currentWorldPos, grid.WorldMatrixNormalizedInv);
-            MyAPIGateway.Utilities.ShowMessage("", GridOffset.ToString());
-            gridChanged = false;
+            if (gridChanged)
+            {
+                grid = Block.CubeGrid;
+                grid.OnBlockRemoved += OnBlockRemoved;
+                grid.PositionComp.OnPositionChanged += OnPositionChanged;
+                var currentWorldPos = Vector3D.Transform(LocalPosition, GetBlockWorldMatrix());
+                GridOffset = Vector3D.Transform(currentWorldPos, grid.WorldMatrixNormalizedInv);
+                MyAPIGateway.Utilities.ShowMessage("", GridOffset.ToString());
+                gridChanged = false;
+            }
         }
 
         public MatrixD GetBlockWorldMatrix()

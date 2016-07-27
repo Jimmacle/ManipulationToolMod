@@ -9,8 +9,7 @@ namespace Jimmacle.Manipulator
 {
     public class Settings
     {
-        private static Settings s = new Settings();
-        public static Settings Static { get { return s; } }
+        public static Settings Instance { get; private set; } = new Settings();
 
         private float opacity = 0.2f;
         private float forceMult = 1f;
@@ -47,12 +46,12 @@ namespace Jimmacle.Manipulator
                 {
                     using (var file = MyAPIGateway.Utilities.ReadFileInLocalStorage("Settings.cfg", typeof(Settings)))
                     {
-                        s = MyAPIGateway.Utilities.SerializeFromXML<Settings>(file.ReadToEnd());
+                        Instance = MyAPIGateway.Utilities.SerializeFromXML<Settings>(file.ReadToEnd());
                     }
                 }
                 catch
                 {
-                    if (Extensions.HasGUI())
+                    if (Extensions.HasGui())
                     {
                         MyAPIGateway.Utilities.ShowNotification("Failed to load Manipulator settings.", 4000, VRage.Game.MyFontEnum.Red);
                     }
@@ -66,13 +65,13 @@ namespace Jimmacle.Manipulator
             {
                 using (var file = MyAPIGateway.Utilities.WriteFileInLocalStorage("Settings.cfg", typeof(Settings)))
                 {
-                    var serialized = MyAPIGateway.Utilities.SerializeToXML(s);
+                    var serialized = MyAPIGateway.Utilities.SerializeToXML(Instance);
                     file.Write(serialized);
                 }
             }
             catch
             {
-                if (Extensions.HasGUI())
+                if (Extensions.HasGui())
                 {
                     MyAPIGateway.Utilities.ShowNotification("Failed to save Manipulator settings.", 4000, VRage.Game.MyFontEnum.Red);
                 }

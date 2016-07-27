@@ -1,5 +1,4 @@
-﻿using Sandbox.Game.Entities.Character;
-using Sandbox.ModAPI;
+﻿using Sandbox.ModAPI;
 using System;
 using VRage.Game;
 using VRage.Game.Components;
@@ -11,33 +10,28 @@ namespace Jimmacle.Manipulator
 {
     public class Grabber
     {
-        private IMyPlayer player;
         private MatrixD iCamOrient;
         private IMyEntity character;
-
         private IMyEntity grabbedEntity;
-        private MatrixD iEntOrient;
         private Vector3D grabVector;
         private Vector3D grabPos;
         private Vector3D localGrabPos;
+        private float dampAng;
 
-        private float dampAng = 0;
-
-        public IMyPlayer Player { get { return player; } }
+        public IMyPlayer Player { get; }
 
         private MatrixD HeadTransform
         {
             get
             {
-                if (character == null)
-                    return MatrixD.Identity;
-                return (character as VRage.Game.ModAPI.Interfaces.IMyControllableEntity).GetHeadMatrix(true);
+                var controller = character as VRage.Game.ModAPI.Interfaces.IMyControllableEntity;
+                return controller?.GetHeadMatrix(true) ?? MatrixD.Identity;
             }
         }
 
         public Grabber(IMyPlayer player)
         {
-            this.player = player;
+            Player = player;
         }
 
         /// <summary>
@@ -46,15 +40,15 @@ namespace Jimmacle.Manipulator
         /// <param name="range">Range in front of the camera.</param>
         public bool TryGrabNew(double range)
         {
-            character = player?.Controller?.ControlledEntity?.Entity;
+            character = Player?.Controller?.ControlledEntity?.Entity;
             var builder = character?.GetObjectBuilder() as MyObjectBuilder_Character;
             if (builder == null || builder.HandWeapon != null)
             {
                 return false;
             }
 
-            Vector3D rayStart = HeadTransform.Translation + HeadTransform.Forward;
-            Vector3D rayEnd = rayStart + (HeadTransform.Forward * range);
+            var rayStart = HeadTransform.Translation + HeadTransform.Forward;
+            var rayEnd = rayStart + (HeadTransform.Forward * range);
 
             IHitInfo hitInfo;
 
@@ -65,7 +59,7 @@ namespace Jimmacle.Manipulator
 
             if (hitInfo.HitEntity is IMyCharacter)
             {
-                if (Extensions.HasGUI())
+                if (Extensions.HasGui())
                 {
                     MyAPIGateway.Utilities.ShowNotification("Can't grab other players.", 1000, MyFontEnum.Red);
                 }
@@ -74,7 +68,7 @@ namespace Jimmacle.Manipulator
 
             if (hitInfo.HitEntity.Physics?.IsStatic ?? true)
             {
-                if (Extensions.HasGUI())
+                if (Extensions.HasGui())
                 {
                     MyAPIGateway.Utilities.ShowNotification("Can't grab a static object.", 1000, MyFontEnum.Red);
                 }
@@ -84,11 +78,9 @@ namespace Jimmacle.Manipulator
             grabPos = hitInfo.Position;
             grabbedEntity = hitInfo.HitEntity;
             grabVector = hitInfo.Position - HeadTransform.Translation;
-            iEntOrient = grabbedEntity.WorldMatrix.GetOrientation();
             iCamOrient = HeadTransform.GetOrientation();
 
-            dampAng = grabbedEntity.Physics?.AngularDamping ?? 0;
-
+            dampAng = grabbedEntity.Physics.AngularDamping;
             grabbedEntity.Physics.AngularDamping = 0.5f;
 
             localGrabPos = Vector3D.Transform(grabPos, grabbedEntity.WorldMatrixNormalizedInv);
@@ -122,7 +114,7 @@ namespace Jimmacle.Manipulator
                 var velError = character.Physics.LinearVelocity - grabbedEntity.Physics.LinearVelocity;
 
                 var totalError = posError + velError;
-                var forceMag = (float)Math.Pow(totalError.Length() * grabbedEntity.Physics.Mass, Settings.Static.ForceMult);
+                var forceMag = (float)Math.Pow(totalError.Length() * grabbedEntity.Physics.Mass, Settings.Instance.ForceMult);
 
                 if (forceMag > 100000)
                 {
@@ -134,10 +126,10 @@ namespace Jimmacle.Manipulator
                 grabbedEntity.Physics.AddForce(MyPhysicsForceType.APPLY_WORLD_FORCE, force, worldGrabPos, null);
 
                 //Graphics stuff
-                if (Extensions.HasGUI())
+                if (!Extensions.HasGui())
                 {
                     var lineColor = Vector4.Lerp(Color.LimeGreen, Color.Red, (float)distanceRatio);
-                    lineColor.W = Settings.Static.Opacity;
+                    lineColor.W = Settings.Instance.Opacity;
                     var grabMatrix = MatrixD.CreateFromTransformScale(Quaternion.Identity, worldGrabPos, Vector3D.One);
                     var targetMatrix = MatrixD.CreateFromTransformScale(Quaternion.Identity, targetTranslation, Vector3D.One);
                     var sphereColor = (Color)lineColor;
@@ -159,7 +151,6 @@ namespace Jimmacle.Manipulator
             }
             grabbedEntity = null;
             iCamOrient = MatrixD.Identity;
-            iEntOrient = MatrixD.Identity;
         }
     }
 }

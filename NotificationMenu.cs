@@ -11,11 +11,10 @@ namespace Jimmacle.Manipulator
     public class NotificationMenu
     {
         public List<Item> Items = new List<Item>();
-        private bool open = false;
         private int index = 0;
         private Item selected;
 
-        public bool IsOpen { get { return open; } }
+        public bool IsOpen { get; private set; }
 
         public NotificationMenu()
         {
@@ -24,23 +23,23 @@ namespace Jimmacle.Manipulator
 
             var toggleItem = new Item()
             {
-                DisplayFunc = x => $"Selection Mode: {(Settings.Static.ToggleGrab ? "Toggle" : "Hold")}",
-                ScrollUpAction = x => Settings.Static.ToggleGrab = !Settings.Static.ToggleGrab,
-                ScrollDownAction = x => Settings.Static.ToggleGrab = !Settings.Static.ToggleGrab
+                DisplayFunc = x => $"Selection Mode: {(Settings.Instance.ToggleGrab ? "Toggle" : "Hold")}",
+                ScrollUpAction = x => Settings.Instance.ToggleGrab = !Settings.Instance.ToggleGrab,
+                ScrollDownAction = x => Settings.Instance.ToggleGrab = !Settings.Instance.ToggleGrab
             };
 
             var drawItem = new Item()
             {
-                DisplayFunc = x => $"Indicator Opacity (0-1): {Settings.Static.Opacity:0.00}",
-                ScrollUpAction = x => Settings.Static.Opacity += 0.02f,
-                ScrollDownAction = x => Settings.Static.Opacity -= 0.02f
+                DisplayFunc = x => $"Indicator Opacity (0-1): {Settings.Instance.Opacity:0.00}",
+                ScrollUpAction = x => Settings.Instance.Opacity += 0.02f,
+                ScrollDownAction = x => Settings.Instance.Opacity -= 0.02f
             };
 
             var forceItem = new Item()
             {
-                DisplayFunc = x => $"Force Multiplier (0.9-1.2): {Settings.Static.ForceMult:0.00}",
-                ScrollUpAction = x => Settings.Static.ForceMult += 0.05f,
-                ScrollDownAction = x => Settings.Static.ForceMult -= 0.05f
+                DisplayFunc = x => $"Force Multiplier (0.9-1.2): {Settings.Instance.ForceMult:0.00}",
+                ScrollUpAction = x => Settings.Instance.ForceMult += 0.05f,
+                ScrollDownAction = x => Settings.Instance.ForceMult -= 0.05f
             };
 
             Items.Add(toggleItem);
@@ -51,7 +50,7 @@ namespace Jimmacle.Manipulator
         public void Open()
         {
             index = 0;
-            open = true;
+            IsOpen = true;
             selected = null;
             foreach (var item in Items)
             {
@@ -61,7 +60,7 @@ namespace Jimmacle.Manipulator
 
         public void Close()
         {
-            open = false;
+            IsOpen = false;
             selected = null;
             foreach (var item in Items)
             {
@@ -72,7 +71,7 @@ namespace Jimmacle.Manipulator
 
         public void Toggle()
         {
-            if (open)
+            if (IsOpen)
                 Close();
             else
                 Open();
@@ -80,9 +79,9 @@ namespace Jimmacle.Manipulator
 
         public void Update()
         {
-            if (open)
+            if (IsOpen)
             {
-                for (int i = 0; i < Items.Count(); i++)
+                for (int i = 0; i < Items.Count; i++)
                 {
                     var item = Items[i];
 
@@ -127,7 +126,7 @@ namespace Jimmacle.Manipulator
                     index -= wheelSign;
                 }
 
-                index = Math.Min(index, Items.Count() - 1);
+                index = Math.Min(index, Items.Count - 1);
                 index = Math.Max(index, 0);
             }
         }
@@ -147,8 +146,9 @@ namespace Jimmacle.Manipulator
 
             public Item(Func<Item, string> displayFunc = null, Action<Item> leftAction = null, Action<Item> rightAction = null, string name = "")
             {
+                DisplayFunc = displayFunc;
                 ScrollUpAction = leftAction;
-                rightAction = ScrollDownAction;
+                ScrollDownAction = rightAction;
                 ItemText = MyAPIGateway.Utilities.CreateNotification(name);
             }
         }

@@ -8,7 +8,7 @@ namespace Jimmacle.Manipulator
     public class GrabInfo : IGrabInfo
     {
         private bool dirty;
-        public Vector3D LocalPosition { get; private set; } = Vector3D.Zero;
+        public Vector3D LocalPosition { get; } = Vector3D.Zero;
 
         private Vector3D worldPosition;
         public Vector3D WorldPosition
@@ -23,16 +23,10 @@ namespace Jimmacle.Manipulator
             }
         }
 
-        public bool IsValid
-        {
-            get
-            {
-                return PhysicsEntity?.Physics != null && !PhysicsEntity.Closed;
-            }
-        }
+        public bool IsValid => PhysicsEntity?.Physics != null && !PhysicsEntity.Closed;
 
-        public IMyEntity PhysicsEntity { get; private set; }
-        public object GrabbedObject { get { return PhysicsEntity; } }
+        public IMyEntity PhysicsEntity { get; }
+        public object GrabbedObject => PhysicsEntity;
 
         public GrabInfo(IMyEntity entity, Vector3D worldHitPos)
         {
